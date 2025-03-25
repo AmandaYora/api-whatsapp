@@ -8,6 +8,6 @@ RUN yarn install
 COPY . .
 COPY .env .env
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["sh", "-c", "yarn install && yarn start"]

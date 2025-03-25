@@ -1,41 +1,25 @@
 version: '3.8'
-
 services:
   app:
     build: .
     ports:
       - "3000:3000"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
-      PORT: 3000
       DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: whatsapp_api
       DB_USER: root
-      DB_PASS:
-    volumes:
-      - .:/app
-      - ./node_modules:/app/node_modules
-    working_dir: /app
-    restart: unless-stopped
+      DB_PASSWORD: ""
+      DB_NAME: whatsapp_api
+      PORT: "3001"
+      SESSION_SECRET: "dimasprasetio2025"
 
   db:
-    image: mysql:8.0
+    image: mysql:5.7
     restart: always
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: ""
       MYSQL_DATABASE: whatsapp_api
     ports:
-      - "3307:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  db_data:
+      - "3306:3306"
