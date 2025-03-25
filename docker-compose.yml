@@ -22,4 +22,4 @@ services:
       MYSQL_ROOT_PASSWORD: ""
       MYSQL_DATABASE: whatsapp_api
     ports:
-      - "3306:3306"
+      - "3307:3306"
