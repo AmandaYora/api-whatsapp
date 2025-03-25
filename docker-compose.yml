@@ -17,6 +17,7 @@ services:
       DB_PASS:
     volumes:
       - .:/app
+      - ./node_modules:/app/node_modules
     working_dir: /app
     restart: unless-stopped
 
@@ -27,7 +28,7 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: whatsapp_api
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
