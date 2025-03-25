@@ -78,10 +78,14 @@ async function createClient(deviceId, awaitInit = true) {
     delete clients[deviceId];
     resolveInitialization();
   });
+
   client.on('disconnected', (reason) => {
     console.log(`Device ${deviceId} terputus: ${reason}`);
-    client.initialize();
+    if (reason !== 'LOGOUT') {
+      client.initialize();
+    }
   });
+
   client.initialize();
   if (awaitInit) {
     await initializing;
