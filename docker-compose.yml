@@ -8,8 +8,9 @@ services:
       - db
     environment:
       DB_HOST: db
+      DB_PORT: "3306"
       DB_USER: root
-      DB_PASSWORD: ""
+      DB_PASS: ""
       DB_NAME: whatsapp_api
       PORT: "3001"
       SESSION_SECRET: "dimasprasetio2025"

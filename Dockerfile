@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libxfixes3 \
     libxrandr2 \
     libgtk-3-0 \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -25,9 +26,11 @@ RUN yarn install
 COPY . .
 COPY .env .env
 
+# Salin wait-for-it.sh ke root container dan beri hak akses executable
 COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "yarn install && yarn start"]
+# Perbaiki: tunggu DB pada port internal 3306
+CMD ["/wait-for-it.sh", "db:3306", "--", "yarn", "start"]
