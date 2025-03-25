@@ -2,10 +2,11 @@ FROM node:20
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN corepack enable
+COPY package.json yarn.lock ./
+RUN yarn install
 
 COPY . .
+COPY .env .env
 
 EXPOSE 3000
 

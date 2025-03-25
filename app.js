@@ -36,7 +36,7 @@ db.init()
       res.json({ success: true, message: 'API WhatsApp Multi-User aktif 🚀', data: null });
     });
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.c || 3000;
     app.listen(PORT, () => {
       console.log(`✅ Server berjalan di http://localhost:${PORT}`);
     });
