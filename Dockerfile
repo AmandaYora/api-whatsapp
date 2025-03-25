@@ -1,7 +1,12 @@
-FROM node:16-alpine
+FROM node:20
+
 WORKDIR /app
+
 COPY package*.json ./
-RUN npm install
+RUN corepack enable && yarn install
+
 COPY . .
+
 EXPOSE 3000
+
 CMD ["node", "app.js"]
