@@ -64,10 +64,12 @@ async function createClient(deviceId, awaitInit = true) {
   client.on('message', (msg) => {
     clients[deviceId].messages.push({
       from: msg.from,
+      author: msg.author || null,
       body: msg.body,
       timestamp: msg.timestamp
     });
   });
+  
   client.on('ready', async () => {
     console.log(`Client untuk device ${deviceId} sudah siap`);
     clients[deviceId].qrCodeData = null;
@@ -122,9 +124,14 @@ async function sendMessage(deviceId, number, message) {
 }
 
 async function sendGroupMessage(deviceId, groupId, message) {
+  const c = await createClient(deviceId, true);
+  let formattedGroupId = groupId;
+  if (!groupId.endsWith('@g.us')) {
+    formattedGroupId = `${groupId}@g.us`;
+  }
   try {
-    const c = await createClient(deviceId, true);
-    return await c.client.sendMessage(groupId, message);
+    const result = await c.client.sendMessage(formattedGroupId, message);
+    return result;
   } catch (error) {
     console.error(`Gagal mengirim pesan ke grup untuk device ${deviceId}:`, error);
     return jsonResponse(false, "Gagal mengirim pesan ke grup");
@@ -169,28 +176,59 @@ function checkStatus(deviceId) {
   return { success: false, status: 'not_initialized' };
 }
 
-function getReceivedMessages(deviceId) {
-  const c = clients[deviceId];
-  if (c && c.messages) {
-    return c.messages.map(msg => ({
-      ...msg,
-      from: msg.from.replace('@c.us', '')
-    }));
-  }
-  return [];
+function formatTimestamp(ts) {
+  return new Date(ts * 1000).toLocaleString('id-ID', { hour12: false });
 }
 
-async function getGroupList(deviceId) {
-  try {
-    const c = await createClient(deviceId, true);
-    const chats = await c.client.getChats();
-    const groups = chats.filter(chat => chat.isGroup);
-    return jsonResponse(true, "Daftar grup berhasil diambil", groups);
-  } catch (error) {
-    console.error(`Gagal mengambil daftar grup untuk device ${deviceId}:`, error);
-    return jsonResponse(false, "Gagal mengambil daftar grup");
-  }
+function getReceivedMessages(deviceId) {
+  const c = clients[deviceId];
+  if (!c || !c.messages) return { chat: [], group: [], status: [] };
+
+  const chatMessages = [];
+  const groupMessages = [];
+  const statusMessages = [];
+
+  c.messages.forEach(msg => {
+    const formattedMsg = { ...msg, readableTimestamp: formatTimestamp(msg.timestamp) };
+    if (msg.from.includes('@g.us')) {
+      groupMessages.push(formattedMsg);
+    } else if (msg.from.includes('status@broadcast')) {
+      statusMessages.push(formattedMsg);
+    } else if (msg.from.includes('@c.us')) {
+      chatMessages.push({ ...formattedMsg, from: msg.from.replace('@c.us', '') });
+    } else {
+      chatMessages.push(formattedMsg);
+    }
+  });
+
+  chatMessages.sort((a, b) => b.timestamp - a.timestamp);
+  groupMessages.sort((a, b) => b.timestamp - a.timestamp);
+  statusMessages.sort((a, b) => b.timestamp - a.timestamp);
+
+  return { chat: chatMessages, group: groupMessages, status: statusMessages };
 }
+
+function getGroupList(deviceId) {
+  const c = clients[deviceId];
+  if (c && c.messages) {
+    const groupMessages = c.messages.filter(msg => msg.from.includes('@g.us'));
+    const groups = groupMessages.reduce((acc, msg) => {
+      const formattedMsg = { ...msg, readableTimestamp: formatTimestamp(msg.timestamp) };
+      if (!acc[msg.from]) {
+        acc[msg.from] = { from: msg.from, messages: [formattedMsg] };
+      } else {
+        acc[msg.from].messages.push(formattedMsg);
+      }
+      return acc;
+    }, {});
+    Object.keys(groups).forEach(groupId => {
+      groups[groupId].messages.sort((a, b) => b.timestamp - a.timestamp);
+    });
+    return jsonResponse(true, "Daftar grup berhasil diambil", Object.values(groups));
+  }
+  return jsonResponse(false, "Grup tidak tersedia");
+}
+
 
 module.exports = {
   jsonResponse,
