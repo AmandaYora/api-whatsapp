@@ -5,7 +5,9 @@ const {
   getQRCode,
   logout,
   checkStatus,
-  getReceivedMessages
+  getReceivedMessages,
+  getGroupList,
+  sendGroupMessage
 } = require('../services/whatsapp.service');
 const DeviceService = require('../services/device.service');
 
@@ -26,7 +28,6 @@ const WhatsAppController = {
       return res.status(500).json(jsonResponse(false, 'Gagal inisialisasi client', { error: error.message }));
     }
   },
-
   getQr(req, res) {
     const { deviceId } = req.query;
     if (!deviceId) {
@@ -38,7 +39,6 @@ const WhatsAppController = {
     }
     return res.json(jsonResponse(false, qrData.message));
   },
-
   async sendMessage(req, res) {
     const { deviceId, number, message } = req.body;
     if (!deviceId || !message) {
@@ -54,7 +54,30 @@ const WhatsAppController = {
       return res.status(500).json(jsonResponse(false, 'Gagal mengirim pesan', { error: error.message }));
     }
   },
-
+  async sendGroupMessage(req, res) {
+    const { deviceId, groupId, message } = req.body;
+    if (!deviceId || !groupId || !message) {
+      return res.status(400).json(jsonResponse(false, 'deviceId, groupId dan message diperlukan'));
+    }
+    try {
+      await sendGroupMessage(deviceId, groupId, message);
+      return res.json(jsonResponse(true, 'Pesan grup terkirim'));
+    } catch (error) {
+      return res.status(500).json(jsonResponse(false, 'Gagal mengirim pesan ke grup', { error: error.message }));
+    }
+  },
+  async getGroups(req, res) {
+    const { deviceId } = req.query;
+    if (!deviceId) {
+      return res.status(400).json(jsonResponse(false, 'deviceId diperlukan'));
+    }
+    try {
+      const groups = await getGroupList(deviceId);
+      return res.json(groups);
+    } catch (error) {
+      return res.status(500).json(jsonResponse(false, 'Gagal mengambil grup', { error: error.message }));
+    }
+  },
   async logout(req, res) {
     const { deviceId } = req.body;
     if (!deviceId) {
@@ -67,7 +90,6 @@ const WhatsAppController = {
       return res.status(500).json(jsonResponse(false, 'Gagal logout', { error: error.message }));
     }
   },
-
   checkStatus(req, res) {
     const { deviceId } = req.query;
     if (!deviceId) {
@@ -76,7 +98,6 @@ const WhatsAppController = {
     const status = checkStatus(deviceId);
     return res.json(status);
   },
-
   getMessages(req, res) {
     const { deviceId } = req.query;
     if (!deviceId) {

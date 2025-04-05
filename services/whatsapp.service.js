@@ -9,7 +9,6 @@ const clients = {};
 const QR_DURATION = 60000;
 const jsonResponse = (success, message, data = []) => ({ success, message, data });
 
-// Global error handlers agar server tidak crash
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
 });
@@ -52,7 +51,6 @@ async function createClient(deviceId, awaitInit = true) {
     ready: false,
     messages: []
   };
-
   client.on('qr', (qr) => {
     qrcode.toDataURL(qr, (err, url) => {
       if (err) {
@@ -63,7 +61,6 @@ async function createClient(deviceId, awaitInit = true) {
       }
     });
   });
-
   client.on('message', (msg) => {
     clients[deviceId].messages.push({
       from: msg.from,
@@ -71,7 +68,6 @@ async function createClient(deviceId, awaitInit = true) {
       timestamp: msg.timestamp
     });
   });
-
   client.on('ready', async () => {
     console.log(`Client untuk device ${deviceId} sudah siap`);
     clients[deviceId].qrCodeData = null;
@@ -84,17 +80,14 @@ async function createClient(deviceId, awaitInit = true) {
     }
     resolveInitialization();
   });
-
   client.on('auth_failure', (msg) => {
     console.error(`Gagal otentikasi untuk device ${deviceId}:`, msg);
     delete clients[deviceId];
     resolveInitialization();
   });
-
   client.on('disconnected', (reason) => {
     console.log(`Device ${deviceId} terputus: ${reason}`);
     if (reason === 'LOGOUT') {
-      // Jika logout, hapus sesi terlebih dahulu
       const sessionPath = path.join(__dirname, '../sessions', deviceId);
       try {
         if (fs.existsSync(sessionPath)) {
@@ -105,20 +98,17 @@ async function createClient(deviceId, awaitInit = true) {
         console.error(`Gagal menghapus sesi setelah logout untuk device ${deviceId}:`, error);
       }
       delete clients[deviceId];
-      // Opsional: reinitialize client jika diperlukan
       createClient(deviceId, false)
         .then(() => console.log(`Client untuk device ${deviceId} berhasil direinitialize setelah logout`))
         .catch((err) => console.error(`Gagal reinitialize client ${deviceId}:`, err));
     } else {
-      // Untuk alasan disconnect lainnya, coba reinitialize dengan penanganan error
       client.initialize().catch((err) => {
         console.error(`Error during reinitialization for device ${deviceId}:`, err);
       });
     }
   });
-
   client.initialize().catch((err) => {
-    console.error(`Error during initial client initialization for device ${deviceId}:`, err);
+    console.error(`Error during initial client initialization untuk device ${deviceId}:`, err);
   });
   if (awaitInit) {
     await initializing;
@@ -129,6 +119,16 @@ async function createClient(deviceId, awaitInit = true) {
 async function sendMessage(deviceId, number, message) {
   const c = await createClient(deviceId, true);
   return await c.client.sendMessage(`${number}@c.us`, message);
+}
+
+async function sendGroupMessage(deviceId, groupId, message) {
+  try {
+    const c = await createClient(deviceId, true);
+    return await c.client.sendMessage(groupId, message);
+  } catch (error) {
+    console.error(`Gagal mengirim pesan ke grup untuk device ${deviceId}:`, error);
+    return jsonResponse(false, "Gagal mengirim pesan ke grup");
+  }
 }
 
 function getQRCode(deviceId) {
@@ -180,12 +180,26 @@ function getReceivedMessages(deviceId) {
   return [];
 }
 
+async function getGroupList(deviceId) {
+  try {
+    const c = await createClient(deviceId, true);
+    const chats = await c.client.getChats();
+    const groups = chats.filter(chat => chat.isGroup);
+    return jsonResponse(true, "Daftar grup berhasil diambil", groups);
+  } catch (error) {
+    console.error(`Gagal mengambil daftar grup untuk device ${deviceId}:`, error);
+    return jsonResponse(false, "Gagal mengambil daftar grup");
+  }
+}
+
 module.exports = {
   jsonResponse,
   createClient,
   sendMessage,
+  sendGroupMessage,
   getQRCode,
   logout,
   checkStatus,
-  getReceivedMessages
+  getReceivedMessages,
+  getGroupList
 };
